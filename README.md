@@ -1,26 +1,58 @@
-# VRIQ evaluation code
+# VRIQ evaluation
 
-Code for **VRIQ: Benchmarking and Diagnosing the Visual-Reasoning IQ of Vision–Language Models**.
+Code for the experiments in **VRIQ: Benchmarking and Diagnosing the Visual-Reasoning IQ of Vision–Language Models**.
 
-This folder is the runnable source. It does not contain the puzzle images, model outputs, or API keys. Set keys in the environment. Do not paste them into these files.
+Puzzle images are not in this repository. The first run of each script downloads them from the Hugging Face Hub and caches them on disk.
 
-The released data is on the Hugging Face Hub:
+| Dataset | Hub repo | What you get |
+|---|---|---|
+| VRIQ | [`tina-khezresmaeilzadeh/VRIQ`](https://huggingface.co/datasets/tina-khezresmaeilzadeh/VRIQ) | 1,391 puzzles. Abstract 788, natural 603. |
+| DiagVRIQ | [`tina-khezresmaeilzadeh/DiagVRIQ`](https://huggingface.co/datasets/tina-khezresmaeilzadeh/DiagVRIQ) | 209 natural puzzles plus a verified text description of each image. |
 
-- [VRIQ](https://huggingface.co/datasets/tina-khezresmaeilzadeh/VRIQ) (1,391 items: abstract 788, natural 603)
-- [DiagVRIQ](https://huggingface.co/datasets/tina-khezresmaeilzadeh/DiagVRIQ) (209 natural items with verified descriptions)
+Counts by category:
 
-## Environment
+| Split | 3D | Figure Rotation | Matrix Prediction | Odd One Out | Sequence Completion | Total |
+|---|---:|---:|---:|---:|---:|---:|
+| abstract | 210 | 198 | 141 | 106 | 133 | 788 |
+| natural | 111 | 97 | 146 | 149 | 100 | 603 |
+| DiagVRIQ | — | — | 98 | 51 | 60 | 209 |
+
+Reported averages in the paper are the unweighted mean of the five category accuracies. Each item is scored once. Rows with a blank question or answer are skipped.
+
+## Layout
+
+```text
+vriq/
+├── e2e/         end-to-end accuracy on VRIQ
+│   ├── evaluate.py    open-weight models and OpenAI, including o3
+│   ├── claude.py      Claude Sonnet 4.6 and Claude Opus 5
+│   └── gemini.py      Gemini 2.5 Pro and Gemini 3.1 Pro Preview
+├── diag/        DiagVRIQ: describe the image, then answer
+│   ├── claude.py
+│   ├── openai.py
+│   ├── gemini.py
+│   └── judge.py       perception judge
+├── augment/     same image, plus the verified description
+│   ├── llava.py       LLaVA-1.6-Mistral-7B
+│   ├── qwen.py        Qwen2.5-VL-7B
+│   └── gpt4o.py       GPT-4o
+├── common/      Hub download, prompts, answer extraction
+└── models/      one file per model family
+```
+
+Run every command from this folder.
+
+## Setup
 
 Python 3.12.
 
 ```bash
-cd /path/to/vriq
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-API keys, only for the providers you call:
+Export a key only for the provider you call:
 
 ```bash
 export OPENAI_API_KEY=...
@@ -28,28 +60,20 @@ export ANTHROPIC_API_KEY=...
 export GEMINI_API_KEY=...
 ```
 
-Open-weight runs also need PyTorch and `transformers==4.51.3`. Install a CUDA build of PyTorch that matches the GPUs. The paper used two NVIDIA RTX A6000 GPUs (48 GB each). vLLM is optional and is only needed for `--gen_engine vllm`.
+Open-weight models also need a CUDA build of PyTorch and `transformers==4.51.3`. The paper used two NVIDIA RTX A6000 GPUs (48 GB each). vLLM is optional and is used only with `--gen_engine vllm`.
 
-## Data
+```bash
+pip install torch --index-url https://download.pytorch.org/whl/cu121
+pip install transformers==4.51.3
+```
 
-With no `--dataset_root`, the scripts download the released datasets from the Hugging Face Hub and cache the images locally:
+## 1. End-to-end accuracy
 
-- End-to-end runs load [tina-khezresmaeilzadeh/VRIQ](https://huggingface.co/datasets/tina-khezresmaeilzadeh/VRIQ). Pass `--split abstract` or `--split natural`.
-- DiagVRIQ runs load [tina-khezresmaeilzadeh/DiagVRIQ](https://huggingface.co/datasets/tina-khezresmaeilzadeh/DiagVRIQ), including the verified descriptions.
+The model sees the puzzle image and the question, then returns one option. Run abstract and natural separately.
 
-Rows with a blank question or answer are skipped. Images are resized to at most 250,000 pixels, with each side at least 28 pixels.
+### OpenAI
 
-`--dataset_root` still accepts a local category-folder tree (CSV columns `PID`, `Category`, `Question`, `Ground truth`) if you already have one.
-
-## Paper sections
-
-Reported averages in the paper are unweighted means of the five category accuracies. Each item is evaluated once.
-
-### End-to-end accuracy (Section 6.1)
-
-Run every command from this folder so Python can see the packages.
-
-`e2e.evaluate` is the shared evaluator. `--reasoning_effort` defaults to `high`, so pass the paper setting explicitly. For GPT-5.1 and GPT-5.2 pass `--reasoning_effort none`. For o3 and GPT-5-mini pass `--reasoning_effort medium`.
+`e2e.evaluate` sends `--reasoning_effort high` unless you change it. Pass the value from the table below.
 
 ```bash
 python -m e2e.evaluate \
@@ -62,53 +86,93 @@ python -m e2e.evaluate \
   --tag abstract_sol_high
 ```
 
-Open-weight models, including Qwen3-VL-32B-Thinking, use greedy decoding at temperature 0.
+| Model id | `--reasoning_effort` | `--max_new_tokens` |
+|---|---|---|
+| `gpt-5.6-sol` | `high` on the main table, `medium` on the second row | 16384 |
+| `gpt-5.1`, `gpt-5.2` | `none` | 1024 |
+| `gpt-5-mini`, `o3` | `medium` | 1024 |
+| `gpt-4o`, `gpt-4o-mini` | any value is ignored; these models have no reasoning-effort control | 1024 |
 
-Reasoning settings used in the paper:
+Natural is the same command with `--split natural`.
 
-| Model | Setting |
+JSON files land in `./results/visreasoning/`.
+
+### Open-weight
+
+Greedy decoding, temperature 0. Example for the 7B model in the main table:
+
+```bash
+python -m e2e.evaluate \
+  --split abstract \
+  --model_name_path Qwen/Qwen2.5-VL-7B-Instruct \
+  --gen_engine hf \
+  --temperature 0 \
+  --max_new_tokens 512 \
+  --outputs_dir ./results \
+  --tag abstract_qwen25vl7b
+```
+
+Other checkpoints from the paper, passed the same way:
+
+| Model | `--model_name_path` |
 |---|---|
-| GPT-5.6 Sol | `high` on the main tables; `medium` on DiagVRIQ and as the second main-table row |
-| Claude Opus 5 | adaptive thinking, effort `high` |
-| Gemini 3.1 Pro Preview | thinking level `high` |
-| GPT-5.1, GPT-5.2 | reasoning effort omitted, which selects `none` |
-| o3, GPT-5-mini | reasoning effort omitted, which selects `medium` |
-| Open-weight models, including Qwen3-VL-32B-Thinking | greedy, temperature 0 |
+| Qwen2.5-VL-3B | `Qwen/Qwen2.5-VL-3B-Instruct` |
+| Qwen2.5-VL-3B-AWQ | `Qwen/Qwen2.5-VL-3B-Instruct-AWQ` |
+| Qwen3-VL-32B-Thinking | `Qwen/Qwen3-VL-32B-Thinking` |
+| InternVL3-9B | `OpenGVLab/InternVL3-9B` |
+| LLaVA-1.6-Mistral-7B | `llava-hf/llava-v1.6-mistral-7b-hf` |
+| LLaVA-1.6-Vicuna-7B | `llava-hf/llava-v1.6-vicuna-7b-hf` |
+| LLaVA-1.6-34B | `llava-hf/llava-v1.6-34b-hf` |
+| LLaVA-OneVision-1.5-8B-RL | a local or Hub id whose name contains `onevision-1.5` |
+| Bee-8B-RL | a local or Hub id whose name contains `bee` |
 
-For o3 with tools, omit `--no_o3_tools`. For the matched no-tool condition, pass `--no_o3_tools`.
+Use `--gen_engine vllm` instead of `hf` to serve the same checkpoint with vLLM.
 
-Claude and Gemini use their own scripts. Each command scores one split. Repeat it with `--split natural` for the other domain. Opus 5 uses adaptive thinking at effort high. Gemini 3.1 Pro Preview uses thinking level high.
+### Claude
+
+Opus 5 turns on adaptive thinking at effort high. Sonnet 4.6 does not.
 
 ```bash
 python -m e2e.claude --split abstract --model claude-sonnet-4-6
 python -m e2e.claude --split abstract --model claude-opus-5 --max_tokens 8192
+```
+
+### Gemini
+
+Gemini 3.1 Pro Preview uses thinking level high. Gemini 2.5 Pro does not.
+
+```bash
 python -m e2e.gemini --split abstract --model gemini-2.5-pro
 python -m e2e.gemini --split abstract --model gemini-3.1-pro-preview
 ```
 
-### DiagVRIQ describe-then-solve (Section 6.2)
+## 2. DiagVRIQ: describe, then answer
 
-The model writes a description, then an answer, in one response. GPT-5.6 Sol on DiagVRIQ uses medium reasoning effort.
-
-Open-weight models use greedy decoding at temperature 0.
+One response. The model first writes what it sees, then chooses an option. The data are the 209 DiagVRIQ items.
 
 ```bash
-python -m diag.claude --phase two_stage
-python -m diag.openai
-python -m diag.gemini
+python -m diag.claude --phase two_stage --model claude-opus-5
+python -m diag.openai --model gpt-5.6-sol
+python -m diag.gemini --model gemini-3.1-pro-preview
 ```
 
-Check each script's `--help` for the model flag. Outputs go under `./results`.
+`diag.openai` does not send a reasoning-effort field. For `gpt-5.6-sol` that selects medium, which is the DiagVRIQ setting in the paper.
 
-The perception judge is GPT-5.2. It compares the model description with the verified reference and returns a binary perception-success label. Human agreement and the Claude Opus 4.8 cross-check are in `diag/judge.py`.
+### Perception judge
+
+GPT-5.2 compares the model's description with the verified description and returns a yes/no perception label. Point `--model_output` at the JSON file written by one of the commands above.
 
 ```bash
-python -m diag.judge --help
+python -m diag.judge \
+  --model_output ./results/claude-opus-5_diagvriq_two_stage.json \
+  --use_llm_judge \
+  --judge_model gpt-5.2 \
+  --table_model_name "Claude Opus 5"
 ```
 
-### Ground-truth description augmentation (Section 6.3)
+## 3. Give the model the verified description
 
-The verified description is given to the model together with the image. The paper reports LLaVA-1.6-Mistral-7B, Qwen2.5-VL-7B, and GPT-4o. Claude Opus 5 and GPT-5.6 Sol are not in that table.
+The image is still shown. The verified DiagVRIQ description is added to the prompt. The paper reports three models here: LLaVA-1.6-Mistral-7B, Qwen2.5-VL-7B, and GPT-4o.
 
 ```bash
 python -m augment.llava
@@ -116,22 +180,35 @@ python -m augment.qwen
 python -m augment.gpt4o
 ```
 
-### Tool-augmented inference (Section 6.4)
+Those commands already select the three checkpoints above. LLaVA loads with `--gen_engine hf`. Qwen loads with `--gen_engine vllm`. GPT-4o uses `OPENAI_API_KEY`.
 
-o3 is run on all 1,391 items with `code_interpreter` enabled, and again with tools off. Both conditions use the same prompt. This is one bundled setting: image edits, extra computation, and code execution together.
+## 4. o3 with tools
+
+Same prompt as the end-to-end run. Tools on, then tools off. Run both splits. `code_interpreter` covers image edits, extra computation, and code execution together.
 
 ```bash
 python -m e2e.evaluate \
-  --split natural \
+  --split abstract \
   --model_name_path o3 \
   --gen_engine openai \
   --reasoning_effort medium \
   --outputs_dir ./results \
-  --tag o3_tools
+  --tag abstract_o3_tools
+
+python -m e2e.evaluate \
+  --split abstract \
+  --model_name_path o3 \
+  --gen_engine openai \
+  --reasoning_effort medium \
+  --no_o3_tools \
+  --outputs_dir ./results \
+  --tag abstract_o3_no_tools
 ```
 
-Add `--no_o3_tools` for the no-tool condition.
+Repeat both with `--split natural`.
 
-## What is not in this folder
+## Images
 
-Puzzle images, result JSON files, virtual environments, and API keys stay out of the repository. The original working copy was not modified.
+Leaving `--dataset_root` empty downloads the Hub dataset. `e2e.evaluate` resizes each image to at most 250,000 pixels, with each side at least 28 pixels.
+
+A local folder still works. It must contain category subfolders, each with a CSV whose columns are `PID`, `Category`, `Question`, and `Ground truth`, and images named from the PID (`1.png`, `1.jpg`, and so on).
