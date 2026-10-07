@@ -1,0 +1,14 @@
+# API evaluations (OpenAI, Anthropic, Gemini)
+openai==2.34.0
+anthropic==0.98.1
+google-genai==2.11.0
+huggingface_hub==0.36.2
+pillow==12.1.1
+tqdm==4.67.3
+pandas==3.0.3
+numpy==1.26.4
+
+# Open-weight models (evaluate.py --gen_engine hf or vllm).
+# Install a CUDA torch build that matches the machine, then:
+#   pip install transformers==4.51.3
+# vLLM is optional and is not required for the API runs.
