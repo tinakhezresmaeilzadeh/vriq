@@ -1,6 +1,6 @@
 import os 
 import json
-from extract import Extractor
+from common.extract import Extractor
 import re
 from Levenshtein import distance
 

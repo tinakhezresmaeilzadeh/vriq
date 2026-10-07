@@ -8,7 +8,7 @@ tqdm==4.67.3
 pandas==3.0.3
 numpy==1.26.4
 
-# Open-weight models (evaluate.py --gen_engine hf or vllm).
+# Open-weight models (python -m e2e.evaluate --gen_engine hf or vllm).
 # Install a CUDA torch build that matches the machine, then:
 #   pip install transformers==4.51.3
 # vLLM is optional and is not required for the API runs.

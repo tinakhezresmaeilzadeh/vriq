@@ -13,8 +13,8 @@ from PIL import Image as PILImage
 from google import genai
 from google.genai import types
 
-from utils import save_response_to_json
-from extract import Extractor
+from common.utils import save_response_to_json
+from common.extract import Extractor
 
 
 MAX_PIXELS = 250_000
@@ -131,7 +131,7 @@ def load_gt_pids(dataset_root):
 
 def load_local_dataset_gt_subset(root_dir):
     if not root_dir or not os.path.isdir(root_dir):
-        from hf_data import DIAG_REPO, load_diag
+        from common.data import DIAG_REPO, load_diag
         print(f"[HF] Loading {DIAG_REPO}")
         return load_diag()
     allowed = load_gt_pids(root_dir)

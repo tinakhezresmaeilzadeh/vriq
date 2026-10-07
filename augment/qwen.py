@@ -8,8 +8,8 @@ import re
 from tqdm import tqdm
 from PIL import Image as PILImage
 
-from utils import save_response_to_json
-from extract import Extractor
+from common.utils import save_response_to_json
+from common.extract import Extractor
 
 
 # ----------------------------
@@ -173,7 +173,7 @@ def load_gt_descriptions(dataset_root):
 # ----------------------------
 def load_local_dataset(root_dir):
     if not root_dir or not os.path.isdir(str(root_dir)):
-        from hf_data import DIAG_REPO, load_diag
+        from common.data import DIAG_REPO, load_diag
         print(f"[HF] Loading {DIAG_REPO}")
 
         def _prompt(q, desc):

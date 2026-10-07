@@ -8,8 +8,8 @@ import re
 from tqdm import tqdm
 from PIL import Image as PILImage
 
-from utils import save_response_to_json
-from extract import Extractor  # uses prompts.py internally
+from common.utils import save_response_to_json
+from common.extract import Extractor  # uses prompts.py internally
 
 
 # ----------------------------
@@ -368,7 +368,7 @@ def run_all(args):
     if args.dataset_root and os.path.isdir(args.dataset_root):
         data, missing = load_local_dataset(args.dataset_root)
     else:
-        from hf_data import VRIQ_REPO, load_vriq
+        from common.data import VRIQ_REPO, load_vriq
         print(f"[HF] Loading {VRIQ_REPO} split={args.split}")
         data, missing = load_vriq(args.split)
 

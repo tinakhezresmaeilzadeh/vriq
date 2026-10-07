@@ -71,7 +71,7 @@ def resolve_image(folder, pid):
 
 def load_dataset(dataset_root, split="abstract"):
     if not dataset_root or not os.path.isdir(dataset_root):
-        from hf_data import VRIQ_REPO, load_vriq_light
+        from common.data import VRIQ_REPO, load_vriq_light
         print(f"[HF] Loading {VRIQ_REPO} split={split}")
         return load_vriq_light(split)
 

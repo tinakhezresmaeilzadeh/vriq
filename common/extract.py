@@ -1,6 +1,6 @@
 import re
 from models.gpt import GPT
-from prompts import demo_prompt_mathvista, demo_prompt_superclevr_counting, demo_prompt_tir
+from common.prompts import demo_prompt_mathvista, demo_prompt_superclevr_counting, demo_prompt_tir
 from tqdm import tqdm
 
 class Extractor:
@@ -40,7 +40,7 @@ class Extractor:
             self.use_quick_extract_w_gpt = True
         
     def _save(self):
-        from utils import save_response_to_json
+        from common.utils import save_response_to_json
         save_response_to_json(self.args, self.items_with_raw_responses)
 
     def _build_gpt_extraction_prompt(self, question_prompt, resp):

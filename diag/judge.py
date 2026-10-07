@@ -124,7 +124,7 @@ def load_ground_truth_from_file(path):
 
 def load_ground_truth_from_dataset(dataset_root):
     if not dataset_root or not Path(dataset_root).is_dir():
-        from hf_data import DIAG_REPO, diag_gt_map
+        from common.data import DIAG_REPO, diag_gt_map
         print(f"[HF] Loading descriptions from {DIAG_REPO}")
         return diag_gt_map()
     dataset_root = Path(dataset_root)

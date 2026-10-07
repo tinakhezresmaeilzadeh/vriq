@@ -47,10 +47,12 @@ Reported averages in the paper are unweighted means of the five category accurac
 
 ### End-to-end accuracy (Section 6.1)
 
-`evaluate.py` is the shared evaluator. `--reasoning_effort` defaults to `high`, so pass the paper setting explicitly. For GPT-5.1 and GPT-5.2 pass `--reasoning_effort none`. For o3 and GPT-5-mini pass `--reasoning_effort medium`.
+Run every command from this folder so Python can see the packages.
+
+`e2e.evaluate` is the shared evaluator. `--reasoning_effort` defaults to `high`, so pass the paper setting explicitly. For GPT-5.1 and GPT-5.2 pass `--reasoning_effort none`. For o3 and GPT-5-mini pass `--reasoning_effort medium`.
 
 ```bash
-python evaluate.py \
+python -m e2e.evaluate \
   --split abstract \
   --model_name_path gpt-5.6-sol \
   --gen_engine openai \
@@ -78,10 +80,10 @@ For o3 with tools, omit `--no_o3_tools`. For the matched no-tool condition, pass
 Claude and Gemini use their own scripts. Each command scores one split. Repeat it with `--split natural` for the other domain. Opus 5 uses adaptive thinking at effort high. Gemini 3.1 Pro Preview uses thinking level high.
 
 ```bash
-python run_claude.py --split abstract --model claude-sonnet-4-6
-python run_claude.py --split abstract --model claude-opus-5 --max_tokens 8192
-python run_gemini.py --split abstract --model gemini-2.5-pro
-python run_gemini.py --split abstract --model gemini-3.1-pro-preview
+python -m e2e.claude --split abstract --model claude-sonnet-4-6
+python -m e2e.claude --split abstract --model claude-opus-5 --max_tokens 8192
+python -m e2e.gemini --split abstract --model gemini-2.5-pro
+python -m e2e.gemini --split abstract --model gemini-3.1-pro-preview
 ```
 
 ### DiagVRIQ describe-then-solve (Section 6.2)
@@ -91,17 +93,17 @@ The model writes a description, then an answer, in one response. GPT-5.6 Sol on 
 Open-weight models use greedy decoding at temperature 0.
 
 ```bash
-python run_claude_diagvriq.py --phase two_stage
-python run_openai_diagvriq.py
-python run_gemini_diagvriq.py
+python -m diag.claude --phase two_stage
+python -m diag.openai
+python -m diag.gemini
 ```
 
 Check each script's `--help` for the model flag. Outputs go under `./results`.
 
-The perception judge is GPT-5.2. It compares the model description with the verified reference and returns a binary perception-success label. Human agreement and the Claude Opus 4.8 cross-check are in `judge_perception.py`.
+The perception judge is GPT-5.2. It compares the model description with the verified reference and returns a binary perception-success label. Human agreement and the Claude Opus 4.8 cross-check are in `diag/judge.py`.
 
 ```bash
-python judge_perception.py --help
+python -m diag.judge --help
 ```
 
 ### Ground-truth description augmentation (Section 6.3)
@@ -109,9 +111,9 @@ python judge_perception.py --help
 The verified description is given to the model together with the image. The paper reports LLaVA-1.6-Mistral-7B, Qwen2.5-VL-7B, and GPT-4o. Claude Opus 5 and GPT-5.6 Sol are not in that table.
 
 ```bash
-python run_llava_gt_description.py
-python run_qwen_gt_description.py
-python run_gpt4o_gt_description.py
+python -m augment.llava
+python -m augment.qwen
+python -m augment.gpt4o
 ```
 
 ### Tool-augmented inference (Section 6.4)
@@ -119,7 +121,7 @@ python run_gpt4o_gt_description.py
 o3 is run on all 1,391 items with `code_interpreter` enabled, and again with tools off. Both conditions use the same prompt. This is one bundled setting: image edits, extra computation, and code execution together.
 
 ```bash
-python evaluate.py \
+python -m e2e.evaluate \
   --split natural \
   --model_name_path o3 \
   --gen_engine openai \

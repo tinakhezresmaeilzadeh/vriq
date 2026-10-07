@@ -141,7 +141,7 @@ def load_gt_map(dataset_root):
 
 def load_diagvriq(dataset_root):
     if not dataset_root or not os.path.isdir(dataset_root):
-        from hf_data import DIAG_REPO, load_diag
+        from common.data import DIAG_REPO, load_diag
         print(f"[HF] Loading {DIAG_REPO}")
         return load_diag()
     gt_map = load_gt_map(dataset_root)
