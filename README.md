@@ -2,6 +2,8 @@
 
 Code for the experiments in **VRIQ: Benchmarking and Diagnosing the Visual-Reasoning IQ of Vision–Language Models**.
 
+![Overview of the VRIQ dataset, the evaluation protocols, and the headline results](docs/vriq_overview.png)
+
 Puzzle images are not in this repository. The first run of each script downloads them from the Hugging Face Hub and caches them on disk.
 
 | Dataset | Hub repo | What you get |
